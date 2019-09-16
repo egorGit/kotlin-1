@@ -24,7 +24,7 @@ internal fun <T> windowedIterator(iterator: Iterator<T>, size: Int, step: Int, p
     return iterator<List<T>> {
         val gap = step - size
         if (gap >= 0) {
-            var buffer = ArrayList<T>(size)
+            var buffer = ArrayList<T>(0)
             var skip = 0
             for (e in iterator) {
                 if (skip > 0) { skip -= 1; continue }
@@ -39,7 +39,24 @@ internal fun <T> windowedIterator(iterator: Iterator<T>, size: Int, step: Int, p
                 if (partialWindows || buffer.size == size) yield(buffer)
             }
         } else {
-            val buffer = RingBuffer<T>(size)
+            val firstBuffer = ArrayList<T>(0)
+            for (e in iterator) {
+                firstBuffer.add(e)
+                if (firstBuffer.size == size) break
+            }
+
+            val shouldYieldFirstBuffer = partialWindows || firstBuffer.size == size
+            val shouldCreateRingBuffer = shouldYieldFirstBuffer && iterator.hasNext()
+
+            val buffer: RingBuffer<T>
+            if (shouldCreateRingBuffer) {
+                buffer = RingBuffer(firstBuffer, step)
+                yield(firstBuffer)
+            } else {
+                if (shouldYieldFirstBuffer) yield(firstBuffer)
+                return@iterator
+            }
+
             for (e in iterator) {
                 buffer.add(e)
                 if (buffer.isFull()) {
@@ -86,6 +103,12 @@ internal class MovingSubList<out E>(private val list: List<E>) : AbstractList<E>
 private class RingBuffer<T>(val capacity: Int) : AbstractList<T>(), RandomAccess {
     init {
         require(capacity >= 0) { "ring buffer capacity should not be negative but it is $capacity" }
+    }
+
+    constructor(list: ArrayList<T>, skip: Int) : this(list.size) {
+        for (index in skip until list.size) {
+            add(list[index])
+        }
     }
 
     private val buffer = arrayOfNulls<Any?>(capacity)

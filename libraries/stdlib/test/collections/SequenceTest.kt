@@ -230,6 +230,11 @@ public class SequenceTest {
         seq.toList().let { expectedSingleChunk ->
             assertEquals(expectedSingleChunk, seq.chunked(size).single())
             assertEquals(expectedSingleChunk, seq.chunked(size + 3).single())
+            assertEquals(expectedSingleChunk, seq.chunked(Int.MAX_VALUE).single())
+        }
+
+        infiniteSeq.take(2).let { seq2 ->
+            assertEquals(seq2.toList(), seq2.chunked(Int.MAX_VALUE).single())
         }
 
         assertTrue(emptySequence<String>().chunked(3).none())
