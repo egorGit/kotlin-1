@@ -277,8 +277,8 @@ class DiagnosticReporterByTrackingStrategy(
                     trace.report(
                         Errors.TYPE_MISMATCH.on(
                             deparenthesized,
-                            constraintError.upperKotlinType.unCapture(),
-                            constraintError.lowerKotlinType.unCapture()
+                            constraintError.upperKotlinType/*.unCapture()*/,
+                            constraintError.lowerKotlinType/*.unCapture()*/
                         )
                     )
                 }
