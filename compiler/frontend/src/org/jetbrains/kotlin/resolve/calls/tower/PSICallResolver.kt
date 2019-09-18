@@ -534,6 +534,9 @@ class PSICallResolver(
         } else {
             if (externalLambdaArguments.size > 1) {
                 externalLambdaArguments.drop(1).mapNotNull { it.getLambdaExpression() }.forEach {
+                    if (it.isTrailingLambdaOnNewLIne) {
+                        context.trace.report(Errors.UNEXPECTED_TRAILING_LAMBDA_ON_A_NEW_LINE.on(it))
+                    }
                     context.trace.report(Errors.MANY_LAMBDA_EXPRESSION_ARGUMENTS.on(it))
                 }
             }
