@@ -27,6 +27,7 @@ import com.intellij.psi.impl.source.ClassInnerStuffCache
 import com.intellij.psi.impl.source.PsiExtensibleClass
 import com.intellij.psi.impl.source.PsiImmediateClassType
 import com.intellij.psi.util.MethodSignatureBackedByPsiMethod
+import com.intellij.psi.util.TypeConversionUtil
 import com.siyeh.ig.psiutils.TypeUtils
 import org.jetbrains.kotlin.asJava.classes.cannotModify
 import org.jetbrains.kotlin.asJava.classes.lazyPub
@@ -269,9 +270,10 @@ private class KtLightMethodWrapper(
         return LightParameterListBuilder(manager, KotlinLanguage.INSTANCE).apply {
             baseMethod.parameterList.parameters.forEachIndexed { index, paramFromJava ->
                 val type = providedSignature?.parameterTypes?.get(index) ?: substituteType(paramFromJava.type)
+                val erasureType = TypeConversionUtil.erasure(type)
                 addParameter(
                     LightParameter(
-                        paramFromJava.name ?: "p$index", type,
+                        paramFromJava.name ?: "p$index", erasureType,
                         this@KtLightMethodWrapper, KotlinLanguage.INSTANCE, paramFromJava.isVarArgs
                     )
                 )
