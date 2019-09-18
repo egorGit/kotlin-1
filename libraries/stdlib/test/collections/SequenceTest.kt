@@ -256,6 +256,16 @@ public class SequenceTest {
             assertEquals((startElement until startElement + 5).toList(), window)
         }
 
+        infiniteSeq.take(3500).windowed(2000, 1000, partialWindows = true).forEachIndexed { windowIndex, window ->
+            val startElement = windowIndex * 1000
+            val elementCount = when (windowIndex) {
+                3 -> 500
+                2 -> 1500
+                else -> 2000
+            }
+            assertEquals((startElement until startElement + elementCount).toList(), window)
+        }
+
         val size = 7
         val seq = infiniteSeq.take(7)
 
