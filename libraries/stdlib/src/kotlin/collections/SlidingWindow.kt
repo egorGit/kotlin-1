@@ -22,9 +22,10 @@ internal fun <T> Sequence<T>.windowedSequence(size: Int, step: Int, partialWindo
 internal fun <T> windowedIterator(iterator: Iterator<T>, size: Int, step: Int, partialWindows: Boolean, reuseBuffer: Boolean): Iterator<List<T>> {
     if (!iterator.hasNext()) return EmptyIterator
     return iterator<List<T>> {
+        val bufferInitialCapacity = minOf(size, 1024)
         val gap = step - size
         if (gap >= 0) {
-            var buffer = ArrayList<T>(0)
+            var buffer = ArrayList<T>(bufferInitialCapacity)
             var skip = 0
             for (e in iterator) {
                 if (skip > 0) { skip -= 1; continue }
@@ -39,27 +40,12 @@ internal fun <T> windowedIterator(iterator: Iterator<T>, size: Int, step: Int, p
                 if (partialWindows || buffer.size == size) yield(buffer)
             }
         } else {
-            val firstBuffer = ArrayList<T>(0)
-            for (e in iterator) {
-                firstBuffer.add(e)
-                if (firstBuffer.size == size) break
-            }
-
-            val shouldYieldFirstBuffer = partialWindows || firstBuffer.size == size
-            val shouldCreateRingBuffer = shouldYieldFirstBuffer && iterator.hasNext()
-
-            val buffer: RingBuffer<T>
-            if (shouldCreateRingBuffer) {
-                buffer = RingBuffer(firstBuffer, step)
-                yield(firstBuffer)
-            } else {
-                if (shouldYieldFirstBuffer) yield(firstBuffer)
-                return@iterator
-            }
-
+            var buffer = RingBuffer<T>(bufferInitialCapacity)
             for (e in iterator) {
                 buffer.add(e)
                 if (buffer.isFull()) {
+                    if (buffer.size < size) { buffer = buffer.extended(); continue }
+
                     yield(if (reuseBuffer) buffer else ArrayList(buffer))
                     buffer.removeFirst(step)
                 }
@@ -103,12 +89,6 @@ internal class MovingSubList<out E>(private val list: List<E>) : AbstractList<E>
 private class RingBuffer<T>(val capacity: Int) : AbstractList<T>(), RandomAccess {
     init {
         require(capacity >= 0) { "ring buffer capacity should not be negative but it is $capacity" }
-    }
-
-    constructor(list: ArrayList<T>, skip: Int) : this(list.size) {
-        for (index in skip until list.size) {
-            add(list[index])
-        }
     }
 
     private val buffer = arrayOfNulls<Any?>(capacity)
@@ -170,6 +150,18 @@ private class RingBuffer<T>(val capacity: Int) : AbstractList<T>(), RandomAccess
 
     override fun toArray(): Array<Any?> {
         return toArray(arrayOfNulls(size))
+    }
+
+    /**
+     * Creates a new ring buffer with capacity equal to 1.5 * [capacity].
+     * The returned ring buffer contains the same elements as this ring buffer.
+     */
+    fun extended(): RingBuffer<T> {
+        val newCapacity = capacity + (capacity shr 1) + 1
+        return RingBuffer<T>(newCapacity).also {
+            toArray(it.buffer)
+            it.size = size
+        }
     }
 
     /**
